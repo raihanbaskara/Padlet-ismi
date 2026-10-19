@@ -9,5 +9,5 @@
 
 window.SUPABASE_CONFIG = {
   url: 'https://xijrzwxzytumkhlwemnl.supabase.co',
-  anonKey: 'YOUR_SUPABASE_ANON_KEY' // Butuh anon public key (dimulai dengan eyJ... atau sbp_...)
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpanJ6d3h6eXR1bWtobHdlbW5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MTY5NjMsImV4cCI6MjEwNzk5Mjk2M30.mdVTiqKdcbt821keLeMnjSKvzbSs8U_I2zOGZ7Y46yU'
 };
