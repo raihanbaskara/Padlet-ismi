@@ -293,8 +293,11 @@ for(let i=1;i<=N;i++) build(i);
 // Koneksi Supabase & Realtime Sync
 (async()=>{
   const cfg = window.SUPABASE_CONFIG || {};
-  const url = cfg.url || window.SUPABASE_URL || '';
-  const key = cfg.anonKey || window.SUPABASE_ANON_KEY || '';
+  let url = (cfg.url || window.SUPABASE_URL || '').trim();
+  let key = (cfg.anonKey || window.SUPABASE_ANON_KEY || '').trim();
+  if(url){
+    url = url.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+  }
 
   if(window.supabase && url && key && url !== 'YOUR_SUPABASE_URL'){
     try{

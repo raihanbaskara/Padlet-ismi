@@ -8,6 +8,6 @@
 // ====================================================================
 
 window.SUPABASE_CONFIG = {
-  url: 'YOUR_SUPABASE_URL',       // Contoh: 'https://abcdefghijklm.supabase.co'
-  anonKey: 'YOUR_SUPABASE_ANON_KEY' // Contoh: 'eyJhbGciOiJIUzI1NiIsIn...'
+  url: 'https://xijrzwxzytumkhlwemnl.supabase.co',
+  anonKey: 'YOUR_SUPABASE_ANON_KEY' // Butuh anon public key (dimulai dengan eyJ... atau sbp_...)
 };
