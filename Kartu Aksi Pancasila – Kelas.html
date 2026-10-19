@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kartu Aksi Pancasila – Kelas</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Supabase Client JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <style>
 :root{--bg:#fff8e8;--tx:#2f2f2f;--card:#fff;--mut:#6b6b6b;--bd:#e6d9b8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b16;--tx:#f1ead8;--card:#2a2720;--mut:#b5ad98;--bd:#443e30}}
@@ -58,17 +61,23 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <script>
-const N=20, cards=[]; let db=null, activeFile=null;
+const N=20, cards=[]; let activeFile=null;
+let sb=null, sbConfigured=false;
 const U=v=>(v/20)+'cqw';
 const $=id=>document.getElementById(id);
 const warn=m=>{const w=$('warn');w.textContent=m;w.style.display='block'};
 
+function updateCount(){
+  const n=cards.filter(x=>x.hasData).length;
+  $('cnt').textContent=n+' dari '+N+' kartu sudah terisi • ketuk nomor absen untuk menuju kartu';
+}
+
 function build(n){
   const sec=document.createElement('section');sec.className='k';sec.id='k'+n;
-  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">⬇ Unduh PNG</button><button class="s cs">Hapus Paraf</button><span class="st"></span></div>';
+  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s cs">Hapus Paraf</button><span class="st"></span></div>';
   $('list').appendChild(sec);
   const card=sec.querySelector('.card');
-  const c={n,dirty:false,photo:'',photoDirty:false,sec};
+  const c={n,dirty:false,photo:'',photoDirty:false,sec,hasData:false};
   function el(tag,cls,x,y,w,h,ex){const e=document.createElement(tag);e.className=cls||'';e.style.left=U(x);e.style.top=U(y);if(w)e.style.width=U(w);if(h)e.style.height=U(h);if(ex)Object.assign(e.style,ex);card.appendChild(e);return e}
   const txt=(t,x,y,h,w)=>{const e=el('div','b',x,y,w||0,h,{fontSize:U(52),whiteSpace:'nowrap'});e.textContent=t};
   const inp=(x,y,w,h,ph,max)=>{const e=el('input','',x,y,w,h,{fontSize:U(52)});e.maxLength=max;e.setAttribute('aria-label',ph);e.oninput=()=>{c.dirty=true;status('Belum disimpan')};return e};
@@ -99,47 +108,142 @@ function build(n){
   sig.onpointerdown=e=>{dr=true;sig.setPointerCapture(e.pointerId);const[x,y]=pos(e);sc.beginPath();sc.moveTo(x,y);sc.lineTo(x+.1,y);sc.stroke();c.dirty=true;c.sigDirty=true;status('Belum disimpan')};
   sig.onpointermove=e=>{if(!dr)return;const[x,y]=pos(e);sc.lineTo(x,y);sc.stroke()};
   sig.onpointerup=sig.onpointercancel=()=>{dr=false};
-  sec.querySelector('.cs').onclick=()=>{sc.clearRect(0,0,sig.width,sig.height);c.dirty=true;c.sigDirty=true;status('Belum disimpan')};
+  sec.querySelector('.cs').onclick=()=>{sc.clearRect(0,0,sig.width,sig.height);c.dirty=true;c.sigDirty=true;c.sigData='';status('Belum disimpan')};
   sec.querySelector('.sv').onclick=()=>save(c);
   sec.querySelector('.dl').onclick=()=>download(c);
   cards.push(c);
   const a=document.createElement('a');a.href='#k'+n;a.textContent=n;$('nav').appendChild(a);c.navA=a;
 }
 
-function setPhoto(c,src){c.photo=src;if(src){c.img.src=src;c.img.style.display='block';c.ph.style.display='none'}else{c.img.removeAttribute('src');c.img.style.display='none';c.ph.style.display=''}}
-$('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!activeFile)return;const c=activeFile;
-  try{setPhoto(c,await shrink(f));c.photoDirty=true;c.dirty=true;c.status('Belum disimpan')}catch(x){c.status('Foto tidak bisa dibaca, coba foto lain.')}};
+function setPhoto(c,src){
+  c.photo=src;
+  if(src){
+    c.img.src=src;
+    c.img.style.display='block';
+    c.ph.style.display='none';
+  }else{
+    c.img.removeAttribute('src');
+    c.img.style.display='none';
+    c.ph.style.display='';
+  }
+}
 
-// kecilkan foto agar muat di server (<~190 KB)
-function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
-  im.onload=()=>{URL.revokeObjectURL(u);let W=900,q=.7,out='';
-    for(let i=0;i<6;i++){const s=Math.min(1,W/im.width),cv=document.createElement('canvas');cv.width=Math.round(im.width*s);cv.height=Math.round(im.height*s);
-      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);out=cv.toDataURL('image/jpeg',q);if(out.length<190000)break;W*=.8;q-=.07}
-    res(out)};
-  im.onerror=rej;im.src=u})}
+$('file').onchange=async e=>{
+  const f=e.target.files[0];
+  e.target.value='';
+  if(!f||!activeFile)return;
+  const c=activeFile;
+  try{
+    setPhoto(c,await shrink(f));
+    c.photoDirty=true;
+    c.dirty=true;
+    c.status('Belum disimpan');
+  }catch(x){
+    c.status('Foto tidak bisa dibaca, coba foto lain.');
+  }
+};
+
+// kecilkan foto agar efisien disimpan di database (<~190 KB)
+function shrink(file){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{
+      URL.revokeObjectURL(u);
+      let W=900,q=.7,out='';
+      for(let i=0;i<6;i++){
+        const s=Math.min(1,W/im.width),cv=document.createElement('canvas');
+        cv.width=Math.round(im.width*s);
+        cv.height=Math.round(im.height*s);
+        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+        out=cv.toDataURL('image/jpeg',q);
+        if(out.length<190000)break;
+        W*=.8;q-=.07;
+      }
+      res(out);
+    };
+    im.onerror=rej;
+    im.src=u;
+  });
+}
 
 async function save(c){
-  if(!db){c.status('Penyimpanan tidak tersedia (belum masuk akun?).');return}
-  const btn=c.sec.querySelector('.sv');btn.disabled=true;c.status('Menyimpan…');
+  const btn=c.sec.querySelector('.sv');
+  btn.disabled=true;
+  c.status('Menyimpan…');
+  
+  const sg=c.sigDirty||!c.sigData?c.sig.toDataURL('image/png'):c.sigData;
+  const photoToSave=c.photoDirty?c.photo:(c.photo||'');
+
+  const payload={
+    id: c.n,
+    nama: c.nama.value,
+    aksi: c.aksi.value,
+    sila: c.sila.value,
+    nilai: c.nilai.value,
+    sig: sg,
+    photo: photoToSave,
+    updated_at: new Date().toISOString()
+  };
+
+  // Jika Supabase belum dikonfigurasi, simpan di localStorage sebagai fallback
+  if(!sbConfigured){
+    try{
+      localStorage.setItem('kartu_pancasila_'+c.n, JSON.stringify(payload));
+      c.dirty=false;
+      c.photoDirty=false;
+      c.sigDirty=false;
+      c.sigData=sg;
+      c.hasData=!!(payload.nama||payload.aksi);
+      c.navA.classList.toggle('done',c.hasData);
+      c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi (Lokal)':'';
+      c.status('✅ Tersimpan (Lokal)');
+      updateCount();
+    }catch(err){
+      c.status('Gagal simpan lokal: memori browser penuh');
+    }
+    btn.disabled=false;
+    return;
+  }
+
   try{
-    const sg=c.sigDirty||!c.sigData?c.sig.toDataURL('image/png'):c.sigData;
-    await db.doc('cards/'+c.n).set({nama:c.nama.value,aksi:c.aksi.value,sila:c.sila.value,nilai:c.nilai.value,sig:sg,updated:Date.now()});
-    if(c.photoDirty){await db.doc('photos/'+c.n).set({data:c.photo||''})}
-    c.dirty=false;c.photoDirty=false;c.sigDirty=false;c.sigData=sg;c.status('✅ Tersimpan');
-  }catch(e){c.status('Gagal menyimpan: '+((e&&e.message)||'coba lagi'))}
+    const { error } = await sb.from('kartu_pancasila').upsert(payload);
+    if(error) throw error;
+    c.dirty=false;
+    c.photoDirty=false;
+    c.sigDirty=false;
+    c.sigData=sg;
+    c.hasData=!!(payload.nama||payload.aksi);
+    c.navA.classList.toggle('done',c.hasData);
+    c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi':'';
+    c.status('✅ Tersimpan');
+    updateCount();
+  }catch(e){
+    console.error('Supabase save error:', e);
+    c.status('Gagal menyimpan: '+((e&&e.message)||'coba lagi'));
+  }
   btn.disabled=false;
 }
 
 function applyCard(c,d){
   if(c.dirty)return;
-  c.nama.value=d.nama||'';c.aksi.value=d.aksi||'';c.sila.value=d.sila||'';c.nilai.value=d.nilai||'';
-  c.sigData=d.sig||'';c.sc.clearRect(0,0,c.sig.width,c.sig.height);
-  if(d.sig){const im=new Image();im.onload=()=>c.sc.drawImage(im,0,0);im.src=d.sig}
+  c.nama.value=d.nama||'';
+  c.aksi.value=d.aksi||'';
+  c.sila.value=d.sila||'';
+  c.nilai.value=d.nilai||'';
+  c.sigData=d.sig||'';
+  c.sc.clearRect(0,0,c.sig.width,c.sig.height);
+  if(d.sig){
+    const im=new Image();
+    im.onload=()=>c.sc.drawImage(im,0,0);
+    im.src=d.sig;
+  }
+  if(d.photo!==undefined && !c.photoDirty){
+    setPhoto(c, d.photo||'');
+  }
   c.hasData=!!(d.nama||d.aksi);
   c.navA.classList.toggle('done',c.hasData);
   c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi':'';
-  if(c.hasData)c.status('✅ Tersimpan');
-  const n=cards.filter(x=>x.hasData).length;$('cnt').textContent=n+' dari '+N+' kartu sudah terisi · ketuk nomor absen untuk menuju kartu';
+  if(c.hasData) c.status('✅ Tersimpan');
 }
 
 function download(c){
@@ -159,25 +263,94 @@ function download(c){
     x.fillStyle='#111';x.fillRect(863,424,995,4);x.fillRect(1069,587,183,4);x.fillRect(1000,749,549,4);
     x.fillStyle='#FCA93E';rr(142,830,948,485,40);x.fill();
     x.save();rr(163,856,902,431,100);x.clip();x.fillStyle='#FEFAF0';x.fillRect(163,856,902,431);
-    if(c.photo&&c.img.naturalWidth){const s=Math.max(902/c.img.naturalWidth,431/c.img.naturalHeight),w=c.img.naturalWidth*s,h=c.img.naturalHeight*s;x.drawImage(c.img,163+(902-w)/2,856+(431-h)/2,w,h)}
+    if(c.photo&&c.img.naturalWidth){
+      const s=Math.max(902/c.img.naturalWidth,431/c.img.naturalHeight),w=c.img.naturalWidth*s,h=c.img.naturalHeight*s;
+      x.drawImage(c.img,163+(902-w)/2,856+(431-h)/2,w,h);
+    }
     x.restore();
     x.fillStyle='#648768';rr(429,830,374,105,52);x.fill();x.fillStyle='#fff';x.textAlign='center';F(50);x.fillText('Foto Aksi',616,897);
     x.textAlign='left';x.fillStyle='#333';F(52);x.fillText('Paraf Orang Tua',1547,1085);
     x.drawImage(c.sig,1553,1112,367,165);x.fillStyle='#111';x.fillRect(1553,1278,367,4);
-    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
-    try{const d=await claude.use('downloads');if(!d){c.status('Unduhan tidak tersedia di tampilan ini.');return}
-      await d.save({filename:'Kartu_Aksi_Pancasila_Absen_'+c.n+'.png',data:blob})}catch(e){if(!e||e.code!=='declined')c.status('Unduhan gagal.')}
+    
+    // Download PNG standar browser (kompatibel desktop & mobile)
+    cv.toBlob(blob => {
+      if(!blob){c.status('Unduhan gagal.');return;}
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = 'Kartu_Aksi_Pancasila_Absen_' + c.n + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(u), 2500);
+    }, 'image/png');
   })();
 }
 
-for(let i=1;i<=N;i++)build(i);
+// Inisialisasi kartu absen 1 - 20
+for(let i=1;i<=N;i++) build(i);
 
+// Koneksi Supabase & Realtime Sync
 (async()=>{
-  try{db=await claude.use('db')}catch(e){}
-  if(!db){warn('Penyimpanan bersama belum aktif di tampilan ini. Pastikan kamu membuka link melalui akun yang punya izin, lalu muat ulang halaman.');$('cnt').textContent='Penyimpanan tidak aktif';return}
-  db.collection('cards').onSnapshot(s=>{s.docs.forEach(d=>{const c=cards[+d.id-1];if(c)applyCard(c,d.data()||{})});
-    const n=cards.filter(x=>x.hasData).length;$('cnt').textContent=n+' dari '+N+' kartu sudah terisi · ketuk nomor absen untuk menuju kartu'},e=>warn('Gagal memuat data: '+(e&&e.message||'')));
-  db.collection('photos').onSnapshot(s=>{s.docs.forEach(d=>{const c=cards[+d.id-1];if(c&&!c.photoDirty)setPhoto(c,(d.data()||{}).data||'')})},()=>{});
+  const cfg = window.SUPABASE_CONFIG || {};
+  const url = cfg.url || window.SUPABASE_URL || '';
+  const key = cfg.anonKey || window.SUPABASE_ANON_KEY || '';
+
+  if(window.supabase && url && key && url !== 'YOUR_SUPABASE_URL'){
+    try{
+      sb = window.supabase.createClient(url, key);
+      sbConfigured = true;
+    }catch(err){
+      console.error('Inisialisasi Supabase gagal:', err);
+    }
+  }
+
+  if(!sbConfigured){
+    warn('Penyimpanan online belum terhubung ke Supabase. Masukkan URL & Anon Key di file config.js agar tersinkronisasi otomatis secara online seperti Padlet.');
+    $('cnt').textContent='Mode Offline (Data tersimpan di memori browser ini)';
+    for(let i=1;i<=N;i++){
+      try{
+        const raw = localStorage.getItem('kartu_pancasila_'+i);
+        if(raw) applyCard(cards[i-1], JSON.parse(raw));
+      }catch(e){}
+    }
+    updateCount();
+    return;
+  }
+
+  // 1. Muat data yang sudah tersimpan di database
+  try{
+    const { data, error } = await sb.from('kartu_pancasila').select('*');
+    if(error) throw error;
+    if(data){
+      data.forEach(d=>{
+        const c=cards[d.id-1];
+        if(c) applyCard(c, d);
+      });
+    }
+    updateCount();
+  }catch(err){
+    console.error(err);
+    warn('Gagal memuat data dari Supabase: ' + (err.message || 'Periksa koneksi internet'));
+  }
+
+  // 2. Langganan perubahan data secara REALTIME (mirip Padlet)
+  try{
+    sb.channel('realtime:kartu_pancasila')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kartu_pancasila' }, payload => {
+        const d = payload.new;
+        if(d && d.id){
+          const c = cards[d.id-1];
+          if(c){
+            applyCard(c, d);
+            updateCount();
+          }
+        }
+      })
+      .subscribe();
+  }catch(err){
+    console.warn('Realtime channel error:', err);
+  }
 })();
 </script>
 </body>

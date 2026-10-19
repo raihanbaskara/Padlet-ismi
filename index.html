@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kartu Aksi Pancasila – Kelas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Supabase Client JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--bg:#fff8e8;--tx:#2f2f2f;--card:#fff;--mut:#6b6b6b;--bd:#e6d9b8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b16;--tx:#f1ead8;--card:#2a2720;--mut:#b5ad98;--bd:#443e30}}
+:root[data-theme="dark"]{--bg:#1d1b16;--tx:#f1ead8;--card:#2a2720;--mut:#b5ad98;--bd:#443e30}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 110px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:'Fredoka',system-ui,sans-serif;padding:0 16px 40px}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:1.4rem;margin:.6em 0 .3em}
+.info{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 16px;font-size:.95rem;color:var(--mut);line-height:1.5;margin-bottom:10px}
+.info b{color:var(--tx)}
+#warn{display:none;background:#fde2dc;color:#7a1f10;border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:.92rem}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--bd);margin-bottom:18px}
+nav .t{font-size:.85rem;color:var(--mut);margin-bottom:6px}
+nav .g{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+nav a{display:block;text-align:center;padding:6px 0;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);text-decoration:none;font-size:.9rem;font-weight:500}
+nav a.done{background:#648768;border-color:#648768;color:#fff}
+section.k{margin-bottom:34px}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-weight:600}
+.hd small{font-weight:400;color:var(--mut)}
+.card{position:relative;width:100%;aspect-ratio:2000/1414;container-type:inline-size;background:#F3E0A8;border-radius:12px;overflow:hidden;color:#333;font-family:'Fredoka',sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.card *{position:absolute}
+.card .b{display:flex;align-items:center}
+.lbl{background:#FCA93E;justify-content:center;font-weight:500}
+.yel{background:#FBFFDC}
+.card input{background:transparent;border:0;outline:0;font:inherit;color:#1a3fa0;font-weight:500;padding:0}
+.card input:focus{background:rgba(255,255,255,.55);border-radius:6px}
+.ln{background:#111;height:.18cqw;border-radius:1cqw}
+.ttl{left:0;width:100%;text-align:center;top:12.7cqw;font-size:5.9cqw;line-height:1;font-weight:700;color:#fff;-webkit-text-stroke:.9cqw #648768;paint-order:stroke fill;letter-spacing:-.1cqw}
+.frame{background:#FCA93E;border-radius:2cqw}
+.inner{background:#FEFAF0;border-radius:5cqw;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;color:#9a8f78;font-size:2.4cqw}
+.inner img{position:static;width:100%;height:100%;object-fit:cover;display:none}
+.badge{background:#648768;color:#fff;border-radius:5cqw;justify-content:center;font-weight:500;pointer-events:none}
+.sig{border-radius:1cqw;touch-action:none;cursor:crosshair;background:rgba(255,255,255,.35)}
+.btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+button{font:inherit;border:0;border-radius:12px;padding:10px 16px;cursor:pointer;background:#FCA93E;color:#2f2f2f;font-weight:500}
+button.s{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+button.p{background:#648768;color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.st{font-size:.88rem;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Kartu Aksi Pancasila</h1>
+<div class="info"><b>Cara mengisi:</b> cari kartu sesuai <b>nomor absen</b> anak (ketuk nomor di bawah). Isi kolom, ketuk kotak <b>Foto Aksi</b> untuk menambah foto, tanda tangani kotak <b>Paraf Orang Tua</b> dengan jari, lalu ketuk <b>Simpan Kartu</b>. Kartu yang sudah tersimpan tampil hijau di daftar nomor.</div>
+<div id="warn"></div>
+<nav><div class="t" id="cnt">Memuat…</div><div class="g" id="nav"></div></nav>
+<div id="list"></div>
+<input type="file" id="file" accept="image/*" hidden>
+</div>
+
+<script>
+const N=20, cards=[]; let activeFile=null;
+let sb=null, sbConfigured=false;
+const U=v=>(v/20)+'cqw';
+const $=id=>document.getElementById(id);
+const warn=m=>{const w=$('warn');w.textContent=m;w.style.display='block'};
+
+function updateCount(){
+  const n=cards.filter(x=>x.hasData).length;
+  $('cnt').textContent=n+' dari '+N+' kartu sudah terisi • ketuk nomor absen untuk menuju kartu';
+}
+
+function build(n){
+  const sec=document.createElement('section');sec.className='k';sec.id='k'+n;
+  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s cs">Hapus Paraf</button><span class="st"></span></div>';
+  $('list').appendChild(sec);
+  const card=sec.querySelector('.card');
+  const c={n,dirty:false,photo:'',photoDirty:false,sec,hasData:false};
+  function el(tag,cls,x,y,w,h,ex){const e=document.createElement(tag);e.className=cls||'';e.style.left=U(x);e.style.top=U(y);if(w)e.style.width=U(w);if(h)e.style.height=U(h);if(ex)Object.assign(e.style,ex);card.appendChild(e);return e}
+  const txt=(t,x,y,h,w)=>{const e=el('div','b',x,y,w||0,h,{fontSize:U(52),whiteSpace:'nowrap'});e.textContent=t};
+  const inp=(x,y,w,h,ph,max)=>{const e=el('input','',x,y,w,h,{fontSize:U(52)});e.maxLength=max;e.setAttribute('aria-label',ph);e.oninput=()=>{c.dirty=true;status('Belum disimpan')};return e};
+  const status=m=>sec.querySelector('.st').textContent=m;
+  c.status=status;
+
+  el('div','b yel',66,215,760,95);txt('Nama :',90,215,95);
+  c.nama=inp(272,221,540,83,'Nama',40);
+  el('div','b yel',1611,215,322,95);txt('Absen :',1637,215,95);
+  const ab=el('div','b',1812,215,110,95,{fontSize:U(52),color:'#1a3fa0',fontWeight:500});ab.textContent=n;
+  const t=el('div','ttl',0,64);t.textContent='KARTU AKSI PANCASILA';
+  [['Aksi yang saya lakukan',350],['Sila Pancasila',510],['Nilai Pancasila',670]].forEach(([s,y])=>{const e=el('div','b lbl',142,y,678,109,{fontSize:U(52)});e.textContent=s});
+  c.aksi=inp(863,359,995,70,'Aksi yang saya lakukan',70);el('div','ln',863,425,995,3);
+  txt('Sila ke-',863,519,90);c.sila=inp(1075,522,175,70,'Sila ke',2);el('div','ln',1069,588,183,3);
+  txt('Nilai',865,678,90);c.nilai=inp(1006,680,540,70,'Nilai Pancasila',40);el('div','ln',1000,750,549,3);
+  el('div','frame',142,830,948,485);
+  const inner=el('div','inner',163,856,902,431);inner.innerHTML='<span style="position:static">📷 Ketuk di sini<br>untuk menambah foto aksi</span><img alt="Foto aksi">';
+  c.img=inner.querySelector('img');c.ph=inner.querySelector('span');
+  const bd=el('div','b badge',429,830,374,105,{fontSize:U(50)});bd.textContent='Foto Aksi';
+  txt('Paraf Orang Tua',1547,1022,90);
+  const sig=el('canvas','sig',1553,1112,367,165);sig.width=734;sig.height=330;c.sig=sig;
+  el('div','ln',1553,1278,367,3);
+
+  inner.onclick=()=>{activeFile=c;$('file').click()};
+  const sc=sig.getContext('2d');sc.lineWidth=5;sc.lineCap='round';sc.lineJoin='round';sc.strokeStyle='#1a3fa0';c.sc=sc;
+  let dr=false;
+  const pos=e=>{const r=sig.getBoundingClientRect();return[(e.clientX-r.left)*sig.width/r.width,(e.clientY-r.top)*sig.height/r.height]};
+  sig.onpointerdown=e=>{dr=true;sig.setPointerCapture(e.pointerId);const[x,y]=pos(e);sc.beginPath();sc.moveTo(x,y);sc.lineTo(x+.1,y);sc.stroke();c.dirty=true;c.sigDirty=true;status('Belum disimpan')};
+  sig.onpointermove=e=>{if(!dr)return;const[x,y]=pos(e);sc.lineTo(x,y);sc.stroke()};
+  sig.onpointerup=sig.onpointercancel=()=>{dr=false};
+  sec.querySelector('.cs').onclick=()=>{sc.clearRect(0,0,sig.width,sig.height);c.dirty=true;c.sigDirty=true;c.sigData='';status('Belum disimpan')};
+  sec.querySelector('.sv').onclick=()=>save(c);
+  sec.querySelector('.dl').onclick=()=>download(c);
+  cards.push(c);
+  const a=document.createElement('a');a.href='#k'+n;a.textContent=n;$('nav').appendChild(a);c.navA=a;
+}
+
+function setPhoto(c,src){
+  c.photo=src;
+  if(src){
+    c.img.src=src;
+    c.img.style.display='block';
+    c.ph.style.display='none';
+  }else{
+    c.img.removeAttribute('src');
+    c.img.style.display='none';
+    c.ph.style.display='';
+  }
+}
+
+$('file').onchange=async e=>{
+  const f=e.target.files[0];
+  e.target.value='';
+  if(!f||!activeFile)return;
+  const c=activeFile;
+  try{
+    setPhoto(c,await shrink(f));
+    c.photoDirty=true;
+    c.dirty=true;
+    c.status('Belum disimpan');
+  }catch(x){
+    c.status('Foto tidak bisa dibaca, coba foto lain.');
+  }
+};
+
+// kecilkan foto agar efisien disimpan di database (<~190 KB)
+function shrink(file){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{
+      URL.revokeObjectURL(u);
+      let W=900,q=.7,out='';
+      for(let i=0;i<6;i++){
+        const s=Math.min(1,W/im.width),cv=document.createElement('canvas');
+        cv.width=Math.round(im.width*s);
+        cv.height=Math.round(im.height*s);
+        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+        out=cv.toDataURL('image/jpeg',q);
+        if(out.length<190000)break;
+        W*=.8;q-=.07;
+      }
+      res(out);
+    };
+    im.onerror=rej;
+    im.src=u;
+  });
+}
+
+async function save(c){
+  const btn=c.sec.querySelector('.sv');
+  btn.disabled=true;
+  c.status('Menyimpan…');
+  
+  const sg=c.sigDirty||!c.sigData?c.sig.toDataURL('image/png'):c.sigData;
+  const photoToSave=c.photoDirty?c.photo:(c.photo||'');
+
+  const payload={
+    id: c.n,
+    nama: c.nama.value,
+    aksi: c.aksi.value,
+    sila: c.sila.value,
+    nilai: c.nilai.value,
+    sig: sg,
+    photo: photoToSave,
+    updated_at: new Date().toISOString()
+  };
+
+  // Jika Supabase belum dikonfigurasi, simpan di localStorage sebagai fallback
+  if(!sbConfigured){
+    try{
+      localStorage.setItem('kartu_pancasila_'+c.n, JSON.stringify(payload));
+      c.dirty=false;
+      c.photoDirty=false;
+      c.sigDirty=false;
+      c.sigData=sg;
+      c.hasData=!!(payload.nama||payload.aksi);
+      c.navA.classList.toggle('done',c.hasData);
+      c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi (Lokal)':'';
+      c.status('✅ Tersimpan (Lokal)');
+      updateCount();
+    }catch(err){
+      c.status('Gagal simpan lokal: memori browser penuh');
+    }
+    btn.disabled=false;
+    return;
+  }
+
+  try{
+    const { error } = await sb.from('kartu_pancasila').upsert(payload);
+    if(error) throw error;
+    c.dirty=false;
+    c.photoDirty=false;
+    c.sigDirty=false;
+    c.sigData=sg;
+    c.hasData=!!(payload.nama||payload.aksi);
+    c.navA.classList.toggle('done',c.hasData);
+    c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi':'';
+    c.status('✅ Tersimpan');
+    updateCount();
+  }catch(e){
+    console.error('Supabase save error:', e);
+    c.status('Gagal menyimpan: '+((e&&e.message)||'coba lagi'));
+  }
+  btn.disabled=false;
+}
+
+function applyCard(c,d){
+  if(c.dirty)return;
+  c.nama.value=d.nama||'';
+  c.aksi.value=d.aksi||'';
+  c.sila.value=d.sila||'';
+  c.nilai.value=d.nilai||'';
+  c.sigData=d.sig||'';
+  c.sc.clearRect(0,0,c.sig.width,c.sig.height);
+  if(d.sig){
+    const im=new Image();
+    im.onload=()=>c.sc.drawImage(im,0,0);
+    im.src=d.sig;
+  }
+  if(d.photo!==undefined && !c.photoDirty){
+    setPhoto(c, d.photo||'');
+  }
+  c.hasData=!!(d.nama||d.aksi);
+  c.navA.classList.toggle('done',c.hasData);
+  c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi':'';
+  if(c.hasData) c.status('✅ Tersimpan');
+}
+
+function download(c){
+  (async()=>{
+    try{await document.fonts.load('500 52px Fredoka');await document.fonts.load('700 118px Fredoka')}catch(e){}
+    const cv=document.createElement('canvas');cv.width=2000;cv.height=1414;const x=cv.getContext('2d');
+    const F=(s,w)=>x.font=(w||500)+' '+s+'px Fredoka, sans-serif';
+    const rr=(a,b,w,h,r)=>{x.beginPath();x.roundRect(a,b,w,h,r)};
+    x.fillStyle='#F3E0A8';x.fillRect(0,0,2000,1414);
+    x.fillStyle='#FBFFDC';x.fillRect(66,215,760,95);x.fillRect(1611,215,322,95);
+    x.fillStyle='#333';F(52);x.fillText('Nama :',90,278);x.fillText('Absen :',1637,278);
+    x.fillStyle='#1a3fa0';x.fillText(c.nama.value,272,278);x.fillText(String(c.n),1822,278);
+    x.textAlign='center';F(118,700);x.lineJoin='round';x.lineWidth=18;x.strokeStyle='#648768';x.strokeText('KARTU AKSI PANCASILA',990,167);x.fillStyle='#fff';x.fillText('KARTU AKSI PANCASILA',990,167);
+    F(52);[['Aksi yang saya lakukan',350],['Sila Pancasila',510],['Nilai Pancasila',670]].forEach(([s,y])=>{x.fillStyle='#FCA93E';x.fillRect(142,y,678,109);x.fillStyle='#333';x.fillText(s,481,y+71)});
+    x.textAlign='left';x.fillStyle='#333';x.fillText('Sila ke-',863,581);x.fillText('Nilai',865,740);
+    x.fillStyle='#1a3fa0';x.fillText(c.aksi.value,868,409);x.fillText(c.sila.value,1082,576);x.fillText(c.nilai.value,1012,735);
+    x.fillStyle='#111';x.fillRect(863,424,995,4);x.fillRect(1069,587,183,4);x.fillRect(1000,749,549,4);
+    x.fillStyle='#FCA93E';rr(142,830,948,485,40);x.fill();
+    x.save();rr(163,856,902,431,100);x.clip();x.fillStyle='#FEFAF0';x.fillRect(163,856,902,431);
+    if(c.photo&&c.img.naturalWidth){
+      const s=Math.max(902/c.img.naturalWidth,431/c.img.naturalHeight),w=c.img.naturalWidth*s,h=c.img.naturalHeight*s;
+      x.drawImage(c.img,163+(902-w)/2,856+(431-h)/2,w,h);
+    }
+    x.restore();
+    x.fillStyle='#648768';rr(429,830,374,105,52);x.fill();x.fillStyle='#fff';x.textAlign='center';F(50);x.fillText('Foto Aksi',616,897);
+    x.textAlign='left';x.fillStyle='#333';F(52);x.fillText('Paraf Orang Tua',1547,1085);
+    x.drawImage(c.sig,1553,1112,367,165);x.fillStyle='#111';x.fillRect(1553,1278,367,4);
+    
+    // Download PNG standar browser (kompatibel desktop & mobile)
+    cv.toBlob(blob => {
+      if(!blob){c.status('Unduhan gagal.');return;}
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = 'Kartu_Aksi_Pancasila_Absen_' + c.n + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(u), 2500);
+    }, 'image/png');
+  })();
+}
+
+// Inisialisasi kartu absen 1 - 20
+for(let i=1;i<=N;i++) build(i);
+
+// Koneksi Supabase & Realtime Sync
+(async()=>{
+  const cfg = window.SUPABASE_CONFIG || {};
+  const url = cfg.url || window.SUPABASE_URL || '';
+  const key = cfg.anonKey || window.SUPABASE_ANON_KEY || '';
+
+  if(window.supabase && url && key && url !== 'YOUR_SUPABASE_URL'){
+    try{
+      sb = window.supabase.createClient(url, key);
+      sbConfigured = true;
+    }catch(err){
+      console.error('Inisialisasi Supabase gagal:', err);
+    }
+  }
+
+  if(!sbConfigured){
+    warn('Penyimpanan online belum terhubung ke Supabase. Masukkan URL & Anon Key di file config.js agar tersinkronisasi otomatis secara online seperti Padlet.');
+    $('cnt').textContent='Mode Offline (Data tersimpan di memori browser ini)';
+    for(let i=1;i<=N;i++){
+      try{
+        const raw = localStorage.getItem('kartu_pancasila_'+i);
+        if(raw) applyCard(cards[i-1], JSON.parse(raw));
+      }catch(e){}
+    }
+    updateCount();
+    return;
+  }
+
+  // 1. Muat data yang sudah tersimpan di database
+  try{
+    const { data, error } = await sb.from('kartu_pancasila').select('*');
+    if(error) throw error;
+    if(data){
+      data.forEach(d=>{
+        const c=cards[d.id-1];
+        if(c) applyCard(c, d);
+      });
+    }
+    updateCount();
+  }catch(err){
+    console.error(err);
+    warn('Gagal memuat data dari Supabase: ' + (err.message || 'Periksa koneksi internet'));
+  }
+
+  // 2. Langganan perubahan data secara REALTIME (mirip Padlet)
+  try{
+    sb.channel('realtime:kartu_pancasila')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kartu_pancasila' }, payload => {
+        const d = payload.new;
+        if(d && d.id){
+          const c = cards[d.id-1];
+          if(c){
+            applyCard(c, d);
+            updateCount();
+          }
+        }
+      })
+      .subscribe();
+  }catch(err){
+    console.warn('Realtime channel error:', err);
+  }
+})();
+</script>
+</body>
+</html>
