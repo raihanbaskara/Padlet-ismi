@@ -74,7 +74,7 @@ function updateCount(){
 
 function build(n){
   const sec=document.createElement('section');sec.className='k';sec.id='k'+n;
-  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s cs">Hapus Paraf</button><span class="st"></span></div>';
+  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s cs">🗑️ Hapus Isian Kartu</button><span class="st"></span></div>';
   $('list').appendChild(sec);
   const card=sec.querySelector('.card');
   const c={n,dirty:false,photo:'',photoDirty:false,sec,hasData:false};
@@ -108,7 +108,7 @@ function build(n){
   sig.onpointerdown=e=>{dr=true;sig.setPointerCapture(e.pointerId);const[x,y]=pos(e);sc.beginPath();sc.moveTo(x,y);sc.lineTo(x+.1,y);sc.stroke();c.dirty=true;c.sigDirty=true;status('Belum disimpan')};
   sig.onpointermove=e=>{if(!dr)return;const[x,y]=pos(e);sc.lineTo(x,y);sc.stroke()};
   sig.onpointerup=sig.onpointercancel=()=>{dr=false};
-  sec.querySelector('.cs').onclick=()=>{sc.clearRect(0,0,sig.width,sig.height);c.dirty=true;c.sigDirty=true;c.sigData='';status('Belum disimpan')};
+  sec.querySelector('.cs').onclick=()=>clearCard(c);
   sec.querySelector('.sv').onclick=()=>save(c);
   sec.querySelector('.dl').onclick=()=>download(c);
   cards.push(c);
@@ -224,6 +224,62 @@ async function save(c){
   btn.disabled=false;
 }
 
+async function clearCard(c){
+  if(!confirm('Apakah kamu yakin ingin menghapus seluruh isian kartu Absen '+c.n+'?')) return;
+  const btn = c.sec.querySelector('.cs');
+  btn.disabled = true;
+  c.status('Menghapus isian…');
+
+  c.nama.value = '';
+  c.aksi.value = '';
+  c.sila.value = '';
+  c.nilai.value = '';
+  setPhoto(c, '');
+  c.photo = '';
+  c.photoDirty = false;
+  c.sc.clearRect(0, 0, c.sig.width, c.sig.height);
+  c.sigData = '';
+  c.sigDirty = false;
+  c.dirty = false;
+  c.hasData = false;
+  c.navA.classList.remove('done');
+  c.sec.querySelector('.info-s').textContent = '';
+
+  const emptyPayload = {
+    id: c.n,
+    nama: '',
+    aksi: '',
+    sila: '',
+    nilai: '',
+    sig: '',
+    photo: '',
+    updated_at: new Date().toISOString()
+  };
+
+  if(!sbConfigured){
+    try{
+      localStorage.removeItem('kartu_pancasila_' + c.n);
+      c.status('Isian berhasil dihapus');
+      updateCount();
+    }catch(err){
+      c.status('Gagal menghapus');
+    }
+    btn.disabled = false;
+    return;
+  }
+
+  try{
+    const { error } = await sb.from('kartu_pancasila').upsert(emptyPayload);
+    if(error) throw error;
+    c.status('Isian berhasil dihapus');
+    updateCount();
+  }catch(err){
+    console.error('Supabase delete error:', err);
+    c.status('Gagal menghapus di database');
+  }
+  btn.disabled = false;
+}
+
 function applyCard(c,d){
   if(c.dirty)return;
   c.nama.value=d.nama||'';
@@ -244,6 +300,7 @@ function applyCard(c,d){
   c.navA.classList.toggle('done',c.hasData);
   c.sec.querySelector('.info-s').textContent=c.hasData?'Sudah diisi':'';
   if(c.hasData) c.status('✅ Tersimpan');
+  else c.status('');
 }
 
 function download(c){
