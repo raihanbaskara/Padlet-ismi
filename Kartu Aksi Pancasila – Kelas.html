@@ -42,10 +42,20 @@ section.k{margin-bottom:34px}
 .inner img{position:static;width:100%;height:100%;object-fit:cover;display:none}
 .badge{background:#648768;color:#fff;border-radius:5cqw;justify-content:center;font-weight:500;pointer-events:none}
 .sig{border-radius:1cqw;touch-action:none;cursor:crosshair;background:rgba(255,255,255,.35)}
-.btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
-button{font:inherit;border:0;border-radius:12px;padding:10px 16px;cursor:pointer;background:#FCA93E;color:#2f2f2f;font-weight:500}
+.card-btn{position:absolute;z-index:10;display:none;align-items:center;justify-content:center;gap:0.4cqw;border:0;cursor:pointer;font-family:'Fredoka',system-ui,sans-serif;font-weight:600;padding:0;transition:transform .15s cubic-bezier(0.32,0.72,0,1),background-color .15s ease,border-color .15s ease,opacity .15s ease}
+.card-btn:active{transform:scale(0.95)}
+.del-photo{background:rgba(25,23,20,0.8);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:0.18cqw solid rgba(255,255,255,0.38);border-radius:2cqw;font-size:2.2cqw;box-shadow:0 0.4cqw 1.2cqw rgba(0,0,0,0.28)}
+.del-photo:hover{background:rgba(198,40,40,0.92);border-color:rgba(255,160,160,0.65)}
+.del-sig{background:rgba(255,255,255,0.85);color:#555;border:0.15cqw solid rgba(0,0,0,0.15);border-radius:1.5cqw;font-size:2.2cqw;box-shadow:0 0.2cqw 0.8cqw rgba(0,0,0,0.06);display:flex}
+.del-sig:hover{background:#fff;color:#c62828;border-color:#c62828}
+.btns{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+button{font:inherit;border:0;border-radius:12px;padding:10px 18px;cursor:pointer;background:#FCA93E;color:#2f2f2f;font-weight:500;transition:transform .15s cubic-bezier(0.32,0.72,0,1),box-shadow .15s ease,background-color .15s ease,color .15s ease,border-color .15s ease}
+button:active{transform:scale(0.97)}
 button.s{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
-button.p{background:#648768;color:#fff}
+button.s:hover{background:rgba(0,0,0,0.03)}
+button.p{background:#648768;color:#fff;box-shadow:0 2px 8px rgba(100,135,104,0.3)}
+button.p:hover{background:#557559}
+button.clr:hover{color:#c62828;border-color:rgba(198,40,40,0.35);background:rgba(198,40,40,0.05)}
 button:disabled{opacity:.5;cursor:default}
 .st{font-size:.88rem;color:var(--mut)}
 </style>
@@ -74,7 +84,7 @@ function updateCount(){
 
 function build(n){
   const sec=document.createElement('section');sec.className='k';sec.id='k'+n;
-  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s cs">🗑️ Hapus Isian Kartu</button><span class="st"></span></div>';
+  sec.innerHTML='<div class="hd"><span>Absen '+n+'</span><small class="info-s"></small></div><div class="card"></div><div class="btns"><button class="p sv">💾 Simpan Kartu</button><button class="s dl">📥 Unduh PNG</button><button class="s clr">🗑️ Kosongkan Kartu</button><span class="st"></span></div>';
   $('list').appendChild(sec);
   const card=sec.querySelector('.card');
   const c={n,dirty:false,photo:'',photoDirty:false,sec,hasData:false};
@@ -97,9 +107,35 @@ function build(n){
   const inner=el('div','inner',163,856,902,431);inner.innerHTML='<span style="position:static">📷 Ketuk di sini<br>untuk menambah foto aksi</span><img alt="Foto aksi">';
   c.img=inner.querySelector('img');c.ph=inner.querySelector('span');
   const bd=el('div','b badge',429,830,374,105,{fontSize:U(50)});bd.textContent='Foto Aksi';
+
+  // Tombol Hapus Foto kontekstual (hanya tampil saat foto terisi)
+  const delPhotoBtn=el('button','card-btn del-photo',770,1215,275,58);
+  delPhotoBtn.textContent='✕ Hapus Foto';
+  delPhotoBtn.onclick=e=>{
+    e.stopPropagation();
+    setPhoto(c,'');
+    c.photoDirty=true;
+    c.dirty=true;
+    status('Foto dihapus (Belum disimpan)');
+  };
+  c.delPhotoBtn=delPhotoBtn;
+
   txt('Paraf Orang Tua',1547,1022,90);
   const sig=el('canvas','sig',1553,1112,367,165);sig.width=734;sig.height=330;c.sig=sig;
   el('div','ln',1553,1278,367,3);
+
+  // Tombol Hapus Paraf kontekstual (tepat di bawah garis tanda tangan)
+  const delSigBtn=el('button','card-btn del-sig',1553,1292,367,58);
+  delSigBtn.textContent='↺ Hapus Paraf';
+  delSigBtn.onclick=e=>{
+    e.stopPropagation();
+    sc.clearRect(0,0,sig.width,sig.height);
+    c.sigData='';
+    c.sigDirty=true;
+    c.dirty=true;
+    status('Paraf dihapus (Belum disimpan)');
+  };
+  c.delSigBtn=delSigBtn;
 
   inner.onclick=()=>{activeFile=c;$('file').click()};
   const sc=sig.getContext('2d');sc.lineWidth=5;sc.lineCap='round';sc.lineJoin='round';sc.strokeStyle='#1a3fa0';c.sc=sc;
@@ -108,7 +144,7 @@ function build(n){
   sig.onpointerdown=e=>{dr=true;sig.setPointerCapture(e.pointerId);const[x,y]=pos(e);sc.beginPath();sc.moveTo(x,y);sc.lineTo(x+.1,y);sc.stroke();c.dirty=true;c.sigDirty=true;status('Belum disimpan')};
   sig.onpointermove=e=>{if(!dr)return;const[x,y]=pos(e);sc.lineTo(x,y);sc.stroke()};
   sig.onpointerup=sig.onpointercancel=()=>{dr=false};
-  sec.querySelector('.cs').onclick=()=>clearCard(c);
+  sec.querySelector('.clr').onclick=()=>clearCard(c);
   sec.querySelector('.sv').onclick=()=>save(c);
   sec.querySelector('.dl').onclick=()=>download(c);
   cards.push(c);
@@ -121,10 +157,12 @@ function setPhoto(c,src){
     c.img.src=src;
     c.img.style.display='block';
     c.ph.style.display='none';
+    if(c.delPhotoBtn)c.delPhotoBtn.style.display='flex';
   }else{
     c.img.removeAttribute('src');
     c.img.style.display='none';
     c.ph.style.display='';
+    if(c.delPhotoBtn)c.delPhotoBtn.style.display='none';
   }
 }
 
@@ -225,10 +263,10 @@ async function save(c){
 }
 
 async function clearCard(c){
-  if(!confirm('Apakah kamu yakin ingin menghapus seluruh isian kartu Absen '+c.n+'?')) return;
-  const btn = c.sec.querySelector('.cs');
+  if(!confirm('Apakah kamu yakin ingin mengosongkan seluruh isian kartu Absen '+c.n+'?')) return;
+  const btn = c.sec.querySelector('.clr');
   btn.disabled = true;
-  c.status('Menghapus isian…');
+  c.status('Mengosongkan kartu…');
 
   c.nama.value = '';
   c.aksi.value = '';
@@ -259,10 +297,10 @@ async function clearCard(c){
   if(!sbConfigured){
     try{
       localStorage.removeItem('kartu_pancasila_' + c.n);
-      c.status('Isian berhasil dihapus');
+      c.status('Kartu berhasil dikosongkan (Lokal)');
       updateCount();
     }catch(err){
-      c.status('Gagal menghapus');
+      c.status('Gagal mengosongkan');
     }
     btn.disabled = false;
     return;
@@ -271,11 +309,11 @@ async function clearCard(c){
   try{
     const { error } = await sb.from('kartu_pancasila').upsert(emptyPayload);
     if(error) throw error;
-    c.status('Isian berhasil dihapus');
+    c.status('Kartu berhasil dikosongkan');
     updateCount();
   }catch(err){
-    console.error('Supabase delete error:', err);
-    c.status('Gagal menghapus di database');
+    console.error('Supabase clear error:', err);
+    c.status('Gagal mengosongkan di database');
   }
   btn.disabled = false;
 }
