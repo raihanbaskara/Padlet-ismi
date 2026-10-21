@@ -17,8 +17,26 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 110px);scroll-behavi
 body{margin:0;background:var(--bg);color:var(--tx);font-family:'Fredoka',system-ui,sans-serif;padding:0 16px 40px}
 .wrap{max-width:980px;margin:0 auto}
 h1{font-size:1.4rem;margin:.6em 0 .3em}
-.info{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 16px;font-size:.95rem;color:var(--mut);line-height:1.5;margin-bottom:10px}
-.info b{color:var(--tx)}
+.info{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:22px 24px;font-size:.95rem;color:var(--tx);line-height:1.6;margin-bottom:18px;box-shadow:0 3px 12px rgba(0,0,0,0.04)}
+.info-header{margin-bottom:16px}
+.info-badge{display:inline-block;background:#648768;color:#fff;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.02em}
+.info-welcome{font-size:1.25rem;font-weight:700;color:var(--tx);margin-bottom:4px}
+.info-desc{color:var(--mut);font-size:0.95rem}
+.info-card{background:rgba(252,169,62,0.08);border:1px solid rgba(252,169,62,0.28);border-radius:14px;padding:14px 18px;margin-top:14px}
+.info-card p{margin:4px 0 10px;color:var(--tx);font-size:0.92rem}
+.info-card-title{font-weight:700;font-size:1rem;color:var(--tx);display:flex;align-items:center;gap:6px}
+.info-canva-btn{display:inline-flex;align-items:center;gap:8px;background:#648768;color:#fff;text-decoration:none;padding:9px 18px;border-radius:10px;font-weight:600;font-size:0.9rem;transition:transform 0.15s cubic-bezier(0.32,0.72,0,1),background-color 0.15s ease;box-shadow:0 2px 6px rgba(100,135,104,0.3)}
+.info-canva-btn:hover{background:#557559;transform:translateY(-1px)}
+.info-canva-btn:active{transform:scale(0.98)}
+.info-canva-btn .btn-arrow{font-weight:700;transition:transform 0.15s ease}
+.info-canva-btn:hover .btn-arrow{transform:translate(2px,-2px)}
+.info-list{margin:8px 0 0;padding-left:22px}
+.info-list li{margin-bottom:7px;font-size:0.92rem;line-height:1.55;color:var(--tx)}
+.info-list li b{color:#1a3fa0}
+:root[data-theme="dark"] .info-list li b{color:#64b5f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .info-list li b{color:#64b5f6}}
+.info-list li::marker{font-weight:700;color:#648768}
+.info-footer{margin-top:16px;padding-top:14px;border-top:1px dashed var(--bd);font-size:0.92rem;color:var(--mut);font-weight:500;text-align:center}
 #warn{display:none;background:#fde2dc;color:#7a1f10;border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:.92rem}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--bd);margin-bottom:18px}
 nav .t{font-size:.85rem;color:var(--mut);margin-bottom:6px}
@@ -63,7 +81,42 @@ button:disabled{opacity:.5;cursor:default}
 <body>
 <div class="wrap">
 <h1>Kartu Aksi Pancasila</h1>
-<div class="info"><b>Cara mengisi:</b> cari kartu sesuai <b>nomor absen</b> anak (ketuk nomor di bawah). Isi kolom, ketuk kotak <b>Foto Aksi</b> untuk menambah foto, tanda tangani kotak <b>Paraf Orang Tua</b> dengan jari, lalu ketuk <b>Simpan Kartu</b>. Kartu yang sudah tersimpan tampil hijau di daftar nomor.</div>
+<div class="info">
+  <div class="info-header">
+    <div class="info-badge">Panduan & Bahan Ajar</div>
+    <div class="info-welcome">Selamat datang di Kartu Aksi Pancasila!</div>
+    <div class="info-desc">Mari dampingi anak menerapkan nilai-nilai Pancasila dalam kehidupan sehari-hari. 🏠</div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">📖 Bahan Ajar</div>
+    <p>Pelajari materi tentang nilai-nilai Pancasila bersama anak melalui tautan berikut:</p>
+    <a href="https://canva.link/lo5nbehiu6y1ova" target="_blank" rel="noopener noreferrer" class="info-canva-btn">
+      <span>Pelajari Materi di Canva</span>
+      <span class="btn-arrow">↗</span>
+    </a>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">📝 Cara Mengisi Kartu Aksi Pancasila</div>
+    <ol class="info-list">
+      <li>Pilih nomor absen anak untuk membuka kartu.</li>
+      <li>Tuliskan nama anak pada kolom <b>Nama</b>.</li>
+      <li>Tuliskan aksi Pancasila yang dilakukan anak di rumah.</li>
+      <li>Tuliskan sila Pancasila yang sesuai dengan aksi tersebut.</li>
+      <li>Tuliskan nilai Pancasila yang ditunjukkan melalui aksi tersebut.</li>
+      <li>Tambahkan foto anak saat melakukan aksi dengan mengetuk kotak <b>Foto Aksi</b>.</li>
+      <li>Bubuhkan paraf orang tua pada kolom <b>Paraf Orang Tua</b> dengan menggunakan jari.</li>
+      <li>Jika ingin menghapus foto, paraf, atau isian kartu, gunakan fitur hapus yang tersedia pada kartu.</li>
+      <li>Ketuk tombol <b>Simpan Kartu</b> untuk menyimpan kartu yang telah diisi.</li>
+      <li>Jika ingin menyimpan kartu ke perangkat, ketuk tombol <b>Unduh PNG</b> untuk mengunduh kartu dalam bentuk gambar.</li>
+    </ol>
+  </div>
+
+  <div class="info-footer">
+    Terima kasih atas dukungan Bapak/Ibu dalam membiasakan anak menerapkan nilai-nilai Pancasila dalam kehidupan sehari-hari! 🇮🇩
+  </div>
+</div>
 <div id="warn"></div>
 <nav><div class="t" id="cnt">Memuat…</div><div class="g" id="nav"></div></nav>
 <div id="list"></div>
